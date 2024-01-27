@@ -1,5 +1,8 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const { Account } = require("../model/account.model");
+const { authMiddleware } = require("../middleware/authmiddleware");
+const { User } = require("../model/user.model");
 
 const accountRouter = express.Router();
 
@@ -45,6 +48,7 @@ accountRouter.post("/transfer", authMiddleware, async (req, res) => {
     { userId: req.userId },
     { $inc: { balance: -amount } }
   ).session(session);
+
   await Account.updateOne(
     { userId: to },
     { $inc: { balance: amount } }
@@ -52,8 +56,16 @@ accountRouter.post("/transfer", authMiddleware, async (req, res) => {
 
   // Commit the transaction
   await session.commitTransaction();
+
+  const sentMoneyTo = await User.findById({
+    _id: to,
+  });
+
   res.json({
+    success: true,
     message: "Transfer successful",
+    sentTo: sentMoneyTo.firstName,
+    amount: amount,
   });
 });
 
